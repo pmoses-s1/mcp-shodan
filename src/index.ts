@@ -39,7 +39,7 @@ const server = new FastMCP({
 - Domain Intelligence: Enumerate subdomains and DNS records for a domain (domain_info)
 - Account and Query Help: Check plan and credits (api_info) and list valid search filters and facets (search_filters)
 
-Credit usage: shodan_search costs 1 query credit (plus 1 per page beyond the first), and domain_info costs 1 query credit per lookup. shodan_count, api_info, search_filters, ip_lookup, dns_lookup, reverse_dns_lookup and the CVE/CPE tools do not consume query credits.
+Credit usage: shodan_search costs 1 query credit when the query uses filters (plus 1 per page beyond the first), and domain_info costs 1 query credit per lookup. shodan_count, api_info, search_filters, ip_lookup, dns_lookup, reverse_dns_lookup and the CVE/CPE tools do not consume query credits.
 
 Each tool provides structured, formatted output for easy analysis and integration.`,
 });

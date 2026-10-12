@@ -120,7 +120,7 @@ A health check is served at `/health`.
 > [!WARNING]
 > The HTTP transport has **no authentication**. Keep the port on localhost or behind an authenticating reverse proxy, or anyone who can reach it can spend your query credits.
 
-- Tool arguments are validated with zod schemas before any request is built. IPs must be valid IPv4 or IPv6 and CVE IDs must match `CVE-YYYY-NNNN`.
+- Tool arguments are validated with zod schemas before any request is built. IPs must be valid IPv4 or IPv6, domains valid hostnames, facets `name[:count]` lists, and CVE IDs must match `CVE-YYYY-NNNN`.
 - The API key is read from the environment and sent only to `api.shodan.io`. CVEDB calls carry no key.
 - What you look up is sent to Shodan.
 
