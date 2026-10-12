@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+- Each release now also publishes `server.json` to the MCP Registry, so the listing stays at the npm version.
+
+## 1.0.34
+
 ### Added
 - `shodan_count`: total matches and facet breakdowns for a query without fetching results. Free.
 - `domain_info`: subdomains and DNS records for a domain, with `history`, `type` and `page` options. Costs 1 query credit.
