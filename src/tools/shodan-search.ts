@@ -12,9 +12,12 @@ export function registerShodanSearch(server: FastMCP) {
       query: z.string().describe("Search query for Shodan."),
       max_results: z
         .number()
+        .int()
+        .min(1)
+        .max(100)
         .optional()
         .default(10)
-        .describe("Maximum results to return."),
+        .describe("Maximum results to return (1-100; one Shodan page)."),
     }),
     annotations: {
       readOnlyHint: true,
@@ -25,23 +28,25 @@ export function registerShodanSearch(server: FastMCP) {
         "/shodan/host/search",
         {
           query: args.query,
-          limit: args.max_results,
+          facets: "country",
         }
       );
+
+      const matches = (result.matches || []).slice(0, args.max_results);
 
       const formattedResult = {
         "Search Summary": {
           Query: args.query,
           "Total Results": result.total,
-          "Results Returned": result.matches.length,
+          "Results Returned": matches.length,
         },
         "Country Distribution":
           result.facets?.country?.map((country) => ({
             Country: country.value,
             Count: country.count,
-            Percentage: `${((country.count / result.total) * 100).toFixed(2)}%`,
+            Percentage: `${(result.total > 0 ? (country.count / result.total) * 100 : 0).toFixed(2)}%`,
           })) || [],
-        Matches: result.matches.map((match) => ({
+        Matches: matches.map((match) => ({
           "Basic Information": {
             "IP Address": match.ip_str,
             Organization: match.org,

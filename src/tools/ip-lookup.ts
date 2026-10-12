@@ -9,7 +9,7 @@ export function registerIpLookup(server: FastMCP) {
     description:
       "Retrieve comprehensive information about an IP address, including geolocation, open ports, running services, SSL certificates, hostnames, and cloud provider details if available. Returns service banners and HTTP server information when present.",
     parameters: z.object({
-      ip: z.string().describe("The IP address to query."),
+      ip: z.string().ip().describe("The IP address (IPv4 or IPv6) to query."),
     }),
     annotations: {
       readOnlyHint: true,
@@ -17,6 +17,9 @@ export function registerIpLookup(server: FastMCP) {
     },
     execute: async (args) => {
       const result = await queryShodan(`/shodan/host/${args.ip}`, {});
+
+      const ports: number[] = result.ports || [];
+      const data: ShodanService[] = result.data || [];
 
       const formattedResult = {
         "IP Information": {
@@ -32,8 +35,8 @@ export function registerIpLookup(server: FastMCP) {
           Coordinates: `${result.latitude}, ${result.longitude}`,
           Region: result.region_code,
         },
-        Services: result.ports.map((port: number) => {
-          const service = result.data.find(
+        Services: ports.map((port: number) => {
+          const service = data.find(
             (d: ShodanService) => d.port === port
           );
           return {
@@ -55,11 +58,11 @@ export function registerIpLookup(server: FastMCP) {
               : {}),
           };
         }),
-        "Cloud Provider": result.data[0]?.cloud
+        "Cloud Provider": data[0]?.cloud
           ? {
-              Provider: result.data[0].cloud.provider,
-              Service: result.data[0].cloud.service,
-              Region: result.data[0].cloud.region,
+              Provider: data[0].cloud.provider,
+              Service: data[0].cloud.service,
+              Region: data[0].cloud.region,
             }
           : "Not detected",
         Hostnames: result.hostnames || [],

@@ -42,11 +42,16 @@ export function registerCvesByProduct(server: FastMCP) {
         ),
       skip: z
         .number()
+        .int()
+        .min(0)
         .optional()
         .default(0)
         .describe("Number of CVEs to skip (for pagination)."),
       limit: z
         .number()
+        .int()
+        .min(1)
+        .max(1000)
         .optional()
         .default(1000)
         .describe("Maximum number of CVEs to return (max 1000)."),

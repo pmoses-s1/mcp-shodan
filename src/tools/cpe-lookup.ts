@@ -20,11 +20,16 @@ export function registerCpeLookup(server: FastMCP) {
         ),
       skip: z
         .number()
+        .int()
+        .min(0)
         .optional()
         .default(0)
         .describe("Number of CPEs to skip (for pagination)."),
       limit: z
         .number()
+        .int()
+        .min(1)
+        .max(1000)
         .optional()
         .default(1000)
         .describe("Maximum number of CPEs to return (max 1000)."),
