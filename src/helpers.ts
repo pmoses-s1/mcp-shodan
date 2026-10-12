@@ -77,6 +77,18 @@ export async function queryCVEsByProduct(params: {
   }
 }
 
+// CVEDB's ranking_epss is a percentile (1.0 = highest EPSS of all scored CVEs).
+export function formatEpss(epss: number | null | undefined, rankingEpss: number | null | undefined) {
+  if (!epss) return "Not available";
+  const percentile = ((rankingEpss ?? 0) * 100).toFixed(2);
+  return {
+    Score: `${(epss * 100).toFixed(2)}%`,
+    Percentile: `${percentile} (higher than ${percentile}% of scored CVEs)`,
+  };
+}
+
+export const MAX_CVE_CPES = 50;
+
 export function getCvssSeverity(score: number): string {
   if (score >= 9.0) return "Critical";
   if (score >= 7.0) return "High";

@@ -10,8 +10,13 @@
 - `ip_lookup`: OS, host CVEs, and per-service product, version, CPEs and CVEs. New `history` option adds a banner history (one row per port and version with first/last seen, so hundreds of scans stay compact); new `minify` option skips banners.
 - `shodan_search`: `page` and `facets` parameters; OS and CVEs per match.
 
+### Fixed
+- `cves_by_product` never showed "Total CVEs Found": CVEDB only returns a total for `count=true`, so the tool now makes a second, free count request.
+- EPSS ranking was shown as "Top N%" but CVEDB's `ranking_epss` is a percentile, so the most exploitable CVEs read as "Top 100%". It is now reported as a percentile in `cve_lookup` and `cves_by_product`.
+
 ### Changed
 - `ip_lookup` shows the newest banner for each port when several exist.
+- `cve_lookup` lists at most 50 affected CPEs, with the total and a note when there are more. CVE-2021-44228 has 1,593, which made one lookup about 95,000 characters.
 - `shodan_search` returns breakdowns for all requested facets under `Facets`. `Country Distribution` is kept when the country facet is requested, which is the default.
 
 ## 1.0.33

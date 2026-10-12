@@ -475,7 +475,7 @@ Full details for one CVE.
 |---|---|---|---|
 | `cve` | string | yes | `CVE-YYYY-NNNN…`, case-insensitive. For example `CVE-2021-44228`. |
 
-Returns the summary and publish date; CVSS v3 and v2 scores with severity; EPSS probability and percentile ranking; whether it is in CISA's Known Exploited Vulnerabilities (KEV) catalog, with the proposed action and ransomware use; affected CPEs; and references.
+Returns the summary and publish date; CVSS v3 and v2 scores with severity; EPSS probability and its percentile among all scored CVEs; whether it is in CISA's Known Exploited Vulnerabilities (KEV) catalog, with the proposed action and ransomware use; affected CPEs (the first 50, with the total, since popular software can list over a thousand); and references.
 
 <details markdown="1">
 <summary>Sample output: <code>{"cve": "CVE-2021-44228"}</code></summary>
@@ -498,7 +498,7 @@ Returns the summary and publish date; CVSS v3 and v2 scores with severity; EPSS 
     },
     "EPSS": {
       "Score": "100.00%",
-      "Ranking": "Top 100.00%"
+      "Percentile": "100.00 (higher than 100.00% of scored CVEs)"
     }
   },
   "Impact Assessment": {
@@ -506,12 +506,17 @@ Returns the summary and publish date; CVSS v3 and v2 scores with severity; EPSS 
     "Proposed Action": "Apache Log4j2 contains a vulnerability where JNDI features do not protect against attacker-controlled JNDI-related en…",
     "Ransomware Campaign": "Known"
   },
-  "Affected Products": [
-    "cpe:2.3:a:apache:log4j:2.0",
-    "cpe:2.3:a:apache:log4j:2.0.1",
-    "cpe:2.3:a:apache:log4j:2.0.2",
-    "… 1590 more"
-  ],
+  "Affected Products": {
+    "Total": 1593,
+    "Shown": 50,
+    "CPEs": [
+      "cpe:2.3:a:apache:log4j:2.0",
+      "cpe:2.3:a:apache:log4j:2.0.1",
+      "cpe:2.3:a:apache:log4j:2.0.2",
+      "… 47 more"
+    ],
+    "Note": "Showing the first 50 of 1593 affected CPEs. Use cves_by_product with a cpe23 value to check a specific version."
+  },
   "Additional Information": {
     "References": [
       "http://packetstormsecurity.com/files/165225/Apache-Log4j2-2.14.1-Remote-Code-Execution.html",
@@ -572,7 +577,7 @@ List CVEs that affect a product or a specific CPE, with filters for KEV, EPSS or
 | `start_date` | string | no | | Published on or after, `YYYY-MM-DDTHH:MM:SS`. |
 | `end_date` | string | no | | Published on or before, `YYYY-MM-DDTHH:MM:SS`. |
 
-Pass exactly one of `product` and `cpe23`. Returns the query, a results summary with page number, and per-CVE details in the same shape as `cve_lookup` (without the CPE list).
+Pass exactly one of `product` and `cpe23`. Returns the query, a results summary with the total number of matching CVEs and the page number, and per-CVE details in the same shape as `cve_lookup` (without the CPE list).
 
 !!! tip
     The default `limit` of 1000 can return a very large response for popular products. Ask for `count: true` first, or set `limit` to 10-50 with `sort_by_epss: true` to get the most likely exploited issues.
@@ -590,6 +595,7 @@ Pass exactly one of `product` and `cpe23`. Returns the query, a results summary 
     "Date Range": "All dates"
   },
   "Results Summary": {
+    "Total CVEs Found": 20,
     "CVEs Returned": 2,
     "Page": "1",
     "CVEs per Page": 2
@@ -612,7 +618,7 @@ Pass exactly one of `product` and `cpe23`. Returns the query, a results summary 
         },
         "EPSS": {
           "Score": "100.00%",
-          "Ranking": "Top 100.00%"
+          "Percentile": "100.00 (higher than 100.00% of scored CVEs)"
         }
       },
       "Impact Assessment": {
@@ -643,7 +649,7 @@ Pass exactly one of `product` and `cpe23`. Returns the query, a results summary 
         },
         "EPSS": {
           "Score": "100.00%",
-          "Ranking": "Top 99.99%"
+          "Percentile": "99.99 (higher than 99.99% of scored CVEs)"
         }
       },
       "Impact Assessment": {

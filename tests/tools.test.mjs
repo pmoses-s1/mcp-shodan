@@ -149,13 +149,48 @@ test('cve_lookup happy path', async (t) => {
 });
 
 test('cves_by_product happy path and pagination', async (t) => {
-  mockGet(t, {
-    total: 1,
-    cves: [{ cve_id: 'CVE-1-1', published_time: '2020-01-01', summary: 's', cvss_v2: 5, references: [] }],
-  });
+  // Like the real CVEDB: /cves returns only the list; the total needs count=true.
+  const calls = mockGet(t, (url, config) => config.params.count
+    ? { total: 42 }
+    : { cves: [{ cve_id: 'CVE-1-1', published_time: '2020-01-01', summary: 's', cvss_v2: 5, references: [] }] });
   const out = JSON.parse(await run('cves_by_product', { product: 'nginx', skip: 20, limit: 10 }));
   assert.equal(out['Results Summary'].Page, '3');
+  assert.equal(out['Results Summary']['Total CVEs Found'], 42);
   assert.equal(out.Vulnerabilities[0]['Severity Scores']['CVSS v2'].Severity, 'Medium');
+  const countCall = calls.find((c) => c.config.params.count);
+  assert.equal(countCall.config.params.product, 'nginx');
+  assert.equal(countCall.config.params.skip, undefined);
+  assert.equal(countCall.config.params.limit, undefined);
+});
+
+test('EPSS ranking is reported as a percentile', async (t) => {
+  mockGet(t, (url, config) => config?.params?.count ? { total: 1 } : {
+    cve_id: 'CVE-2021-44228', published_time: '2021-12-10T00:00:00', summary: 's',
+    epss: 0.97, ranking_epss: 0.9995, cpes: [], references: [],
+    cves: [{ cve_id: 'CVE-2021-44228', published_time: '2021-12-10', summary: 's', epss: 0.97, ranking_epss: 0.9995, references: [] }],
+  });
+  const expected = { Score: '97.00%', Percentile: '99.95 (higher than 99.95% of scored CVEs)' };
+  const one = JSON.parse(await run('cve_lookup', { cve: 'CVE-2021-44228' }));
+  assert.deepEqual(one['Severity Scores'].EPSS, expected);
+  const many = JSON.parse(await run('cves_by_product', { product: 'log4j', limit: 1 }));
+  assert.deepEqual(many.Vulnerabilities[0]['Severity Scores'].EPSS, expected);
+});
+
+test('cve_lookup caps affected products at 50 and reports the total', async (t) => {
+  const cpes = Array.from({ length: 120 }, (_, i) => `cpe:2.3:a:apache:log4j:2.${i}`);
+  mockGet(t, { cve_id: 'CVE-2021-44228', published_time: '2021-12-10', summary: 's', cpes, references: [] });
+  const out = JSON.parse(await run('cve_lookup', { cve: 'CVE-2021-44228' }));
+  const ap = out['Affected Products'];
+  assert.equal(ap.Total, 120);
+  assert.equal(ap.Shown, 50);
+  assert.deepEqual(ap.CPEs, cpes.slice(0, 50));
+  assert.match(ap.Note, /50 of 120/);
+});
+
+test('cve_lookup lists all affected products when there are few', async (t) => {
+  mockGet(t, { cve_id: 'CVE-2020-0001', published_time: '2021-12-10', summary: 's', cpes: ['cpe:2.3:a:x:y:1'], references: [] });
+  const out = JSON.parse(await run('cve_lookup', { cve: 'CVE-2020-0001' }));
+  assert.deepEqual(out['Affected Products'], { Total: 1, Shown: 1, CPEs: ['cpe:2.3:a:x:y:1'] });
 });
 
 test('cves_by_product mutual-exclusion errors', async () => {
