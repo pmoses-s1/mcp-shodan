@@ -1,6 +1,6 @@
 import { FastMCP, UserError } from "fastmcp";
 import { z } from "zod";
-import { queryCVEsByProduct, getCvssSeverity } from "../helpers.js";
+import { queryCVEsByProduct, getCvssSeverity, formatEpss } from "../helpers.js";
 import type { CveResponse } from "../types.js";
 
 export function registerCvesByProduct(server: FastMCP) {
@@ -82,17 +82,28 @@ export function registerCvesByProduct(server: FastMCP) {
         throw new UserError("Must specify either cpe23 or product.");
       }
 
-      const result = await queryCVEsByProduct({
+      const filters = {
         cpe23: args.cpe23,
         product: args.product,
-        count: args.count,
         is_kev: args.is_kev,
-        sort_by_epss: args.sort_by_epss,
-        skip: args.skip,
-        limit: args.limit,
         start_date: args.start_date,
         end_date: args.end_date,
-      });
+      };
+      // CVEDB only returns a total when count=true, so a listing needs a second
+      // (free) request to report how many CVEs match in all.
+      const [result, totalResult] = await Promise.all([
+        queryCVEsByProduct({
+          ...filters,
+          count: args.count,
+          sort_by_epss: args.sort_by_epss,
+          skip: args.skip,
+          limit: args.limit,
+        }),
+        args.count
+          ? Promise.resolve(undefined)
+          : queryCVEsByProduct({ ...filters, count: true }),
+      ]);
+      const total = args.count ? result.total : totalResult?.total;
 
       const formattedResult = args.count
         ? {
@@ -103,7 +114,7 @@ export function registerCvesByProduct(server: FastMCP) {
               "Sort by EPSS": args.sort_by_epss ? "Yes" : "No",
             },
             Results: {
-              "Total CVEs Found": result.total,
+              "Total CVEs Found": total,
             },
           }
         : {
@@ -117,7 +128,7 @@ export function registerCvesByProduct(server: FastMCP) {
                 : "All dates",
             },
             "Results Summary": {
-              "Total CVEs Found": result.total,
+              "Total CVEs Found": total,
               "CVEs Returned": result.cves.length,
               Page: `${Math.floor(args.skip! / args.limit!) + 1}`,
               "CVEs per Page": args.limit,
@@ -129,6 +140,12 @@ export function registerCvesByProduct(server: FastMCP) {
                 Summary: cve.summary,
               },
               "Severity Scores": {
+                "CVSS v4": cve.cvss_v4
+                  ? {
+                      Score: cve.cvss_v4,
+                      Severity: getCvssSeverity(cve.cvss_v4),
+                    }
+                  : "Not available",
                 "CVSS v3": cve.cvss_v3
                   ? {
                       Score: cve.cvss_v3,
@@ -141,12 +158,7 @@ export function registerCvesByProduct(server: FastMCP) {
                       Severity: getCvssSeverity(cve.cvss_v2),
                     }
                   : "Not available",
-                EPSS: cve.epss
-                  ? {
-                      Score: `${(cve.epss * 100).toFixed(2)}%`,
-                      Ranking: `Top ${(cve.ranking_epss * 100).toFixed(2)}%`,
-                    }
-                  : "Not available",
+                EPSS: formatEpss(cve.epss, cve.ranking_epss),
               },
               "Impact Assessment": {
                 "Known Exploited Vulnerability": cve.kev ? "Yes" : "No",

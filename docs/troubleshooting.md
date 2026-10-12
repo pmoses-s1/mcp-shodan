@@ -14,7 +14,11 @@
 
 ## 403 errors or "Access denied" from `shodan_search`
 
-Search filters (`country:`, `port:`, `product:` and so on) need a Shodan membership or paid API plan, and each filtered search costs one query credit. On a free account, `ip_lookup`, `dns_lookup`, `reverse_dns_lookup` and the CVE tools still work.
+Search filters (`country:`, `port:`, `product:` and so on) need a Shodan membership or paid API plan, and each filtered search costs one query credit. Ask the agent to run `api_info` to see your plan and remaining credits. On a free account, `ip_lookup`, `dns_lookup`, `reverse_dns_lookup` and the CVE tools still work.
+
+## Running out of query credits
+
+`shodan_search` (with filters or past page 1) and `domain_info` spend credits. `shodan_count` gives totals and breakdowns for free; use it first, then search only for the hosts you need.
 
 ## 429 errors or rate limiting
 

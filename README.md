@@ -30,10 +30,11 @@
 
 ## Highlights
 
-- **Host reconnaissance.** Open ports, service banners, HTTP titles, TLS certificate details (fingerprint, JARM, JA3S), cloud provider and tags for any IPv4 or IPv6 address.
-- **Device search.** Shodan query syntax with a country breakdown of all matches.
-- **Vulnerability intelligence.** CVE details with CVSS, EPSS and KEV; CVEs by product or CPE, sortable by EPSS. CVEDB is free and doesn't spend query credits.
-- **Batch DNS.** Forward and reverse lookups for many names or IPs in one call.
+- **Host reconnaissance.** Open ports, products and versions, known CVEs, TLS certificate details (fingerprint, JARM, JA3S), cloud provider and banner history for any IPv4 or IPv6 address.
+- **Device search.** Shodan query syntax with paging and facet breakdowns (country, org, port, vuln and more), plus a free count-only mode for sizing a query.
+- **Vulnerability intelligence.** CVE details with CVSS v4/v3/v2, EPSS and KEV; CVEs by product or CPE, sortable by EPSS. CVEDB is free and doesn't spend query credits.
+- **DNS.** Subdomains and DNS records for a domain, and forward and reverse lookups for many names or IPs in one call.
+- **Credit-aware.** Free tools are marked as free, and `api_info` shows the credits left on your plan.
 - **Two transports.** stdio for desktop clients, HTTP streaming for a shared service.
 - **Tested.** Unit tests with a mocked Shodan API run in CI on Node 20, 22 and 24.
 
@@ -70,20 +71,24 @@ Then ask your agent: *"What is exposed on 8.8.8.8, and is CVE-2021-44228 in the 
 
 ## Tools
 
-Seven read-only tools. Full parameters are in the [tool reference](docs/tools.md).
+Eleven read-only tools. Full parameters are in the [tool reference](docs/tools.md).
 
 | Group | Tool | What it does |
 |---|---|---|
-| Network | `ip_lookup` | Ports, banners, TLS, location, cloud and hostnames for one IP |
-| | `shodan_search` | Search devices with Shodan query syntax (1-100 results, country breakdown) |
+| Network | `ip_lookup` | Ports, products, CVEs, TLS, location and cloud for one IP, optionally with banner history |
+| | `shodan_search` | Search devices with Shodan query syntax, with paging and facet breakdowns |
+| | `shodan_count` | Total matches and facet breakdowns for a query, without results (free) |
+| | `domain_info` | Subdomains and DNS records for a domain |
 | | `dns_lookup` | Resolve hostnames to IPs, in batch |
 | | `reverse_dns_lookup` | Hostnames for IPs, in batch |
 | Vulnerabilities (CVEDB) | `cve_lookup` | CVSS, EPSS, KEV, references and affected CPEs for one CVE |
 | | `cpe_lookup` | CPE 2.3 identifiers for a product name |
 | | `cves_by_product` | CVEs for a product or CPE, filterable by KEV and date, sortable by EPSS |
+| Helpers | `search_filters` | Valid search filter and facet names |
+| | `api_info` | Your plan and remaining query and scan credits |
 
 > [!TIP]
-> Filtered `shodan_search` queries need a Shodan membership and cost one query credit each. `ip_lookup`, the DNS tools and the CVEDB tools work on a free account.
+> Credits: filtered `shodan_search` queries cost one query credit (plus one per extra page) and `domain_info` costs one per call. `shodan_count`, `ip_lookup`, `dns_lookup`, `reverse_dns_lookup`, `search_filters`, `api_info` and the CVEDB tools are free.
 
 ## HTTP streaming transport
 
@@ -115,7 +120,7 @@ A health check is served at `/health`.
 > [!WARNING]
 > The HTTP transport has **no authentication**. Keep the port on localhost or behind an authenticating reverse proxy, or anyone who can reach it can spend your query credits.
 
-- Tool arguments are validated with zod schemas before any request is built. IPs must be valid IPv4 or IPv6 and CVE IDs must match `CVE-YYYY-NNNN`.
+- Tool arguments are validated with zod schemas before any request is built. IPs must be valid IPv4 or IPv6, domains valid hostnames, facets `name[:count]` lists, and CVE IDs must match `CVE-YYYY-NNNN`.
 - The API key is read from the environment and sent only to `api.shodan.io`. CVEDB calls carry no key.
 - What you look up is sent to Shodan.
 
@@ -124,7 +129,7 @@ Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 ## Troubleshooting
 
 - **401 / invalid key:** check for spaces or quotes around the key, then restart the client. `curl "https://api.shodan.io/api-info?key=$SHODAN_API_KEY"` shows your plan and credits.
-- **403 on `shodan_search`:** search filters need a membership or paid API plan.
+- **403 on `shodan_search`:** search filters need a membership or paid API plan. Run `api_info` to see your plan and credits.
 - **429:** Shodan allows about one request per second. Retry after a moment.
 
 More in the [troubleshooting guide](docs/troubleshooting.md).

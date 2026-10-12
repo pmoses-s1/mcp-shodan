@@ -29,7 +29,7 @@ In scope:
 
 - **API key leakage** in logs, error messages or tool output.
 - **Request forgery**: tool input that changes the host, path or method of the request sent to Shodan or CVEDB, or reaches any other host.
-- **Validation bypass** of the IP, CVE ID and numeric bounds checks in the tool schemas under `src/tools/`.
+- **Validation bypass** of the IP, domain, CVE ID, facet and numeric bounds checks in the tool schemas under `src/tools/` and `src/helpers.ts`.
 - **Unauthenticated access** to the HTTP streaming transport beyond what is documented.
 
 Out of scope:
