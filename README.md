@@ -1,8 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
-    <img alt="mcp-shodan: Shodan network and vulnerability intelligence for AI agents" src="docs/assets/banner-light.svg" width="100%">
-  </picture>
+  <img alt="MCP Shodan: network intelligence for AI agents. Internet reconnaissance, DNS intelligence and CVE analysis over the Model Context Protocol." src="docs/assets/banner.webp" width="100%">
 </p>
 
 <p align="center">
@@ -11,7 +8,7 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <img alt="Node 20 or newer" src="https://img.shields.io/badge/node-%E2%89%A520-339933">
   <a href="https://registry.modelcontextprotocol.io"><img alt="MCP Registry" src="https://img.shields.io/badge/MCP-Registry-7c3aed"></a>
-  <a href="https://smithery.ai/server/@burtthecoder/mcp-shodan"><img alt="Smithery" src="https://smithery.ai/badge/@burtthecoder/mcp-shodan"></a>
+  <a href="https://smithery.ai/server/@burtthecoder/mcp-shodan"><img alt="Smithery" src="https://img.shields.io/badge/Smithery-listed-ff5601"></a>
 </p>
 
 <p align="center">
