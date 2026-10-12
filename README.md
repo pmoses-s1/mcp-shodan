@@ -1,299 +1,145 @@
-# Shodan MCP Server
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
+    <img alt="mcp-shodan: Shodan network and vulnerability intelligence for AI agents" src="docs/assets/banner-light.svg" width="100%">
+  </picture>
+</p>
 
-[![smithery badge](https://smithery.ai/badge/@burtthecoder/mcp-shodan)](https://smithery.ai/server/@burtthecoder/mcp-shodan)
-[![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
+<p align="center">
+  <a href="https://www.npmjs.com/package/@burtthecoder/mcp-shodan"><img alt="npm version" src="https://img.shields.io/npm/v/@burtthecoder/mcp-shodan"></a>
+  <a href="https://github.com/w0h1v/mcp-shodan/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/w0h1v/mcp-shodan/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <img alt="Node 20 or newer" src="https://img.shields.io/badge/node-%E2%89%A520-339933">
+  <a href="https://registry.modelcontextprotocol.io"><img alt="MCP Registry" src="https://img.shields.io/badge/MCP-Registry-7c3aed"></a>
+  <a href="https://smithery.ai/server/@burtthecoder/mcp-shodan"><img alt="Smithery" src="https://smithery.ai/badge/@burtthecoder/mcp-shodan"></a>
+</p>
 
-A Model Context Protocol (MCP) server for querying the [Shodan API](https://shodan.io) and [Shodan CVEDB](https://cvedb.shodan.io). This server provides comprehensive access to Shodan's network intelligence and security services, including IP reconnaissance, DNS operations, vulnerability tracking, and device discovery. All tools provide structured, formatted output for easy analysis and integration.
+<p align="center">
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="#tools">Tools</a> ·
+  <a href="#http-streaming-transport">HTTP</a> ·
+  <a href="#security">Security</a> ·
+  <a href="#troubleshooting">Troubleshooting</a> ·
+  <a href="https://w0h1v.github.io/mcp-shodan/">Docs</a>
+</p>
 
-## Quick Start (Recommended)
+**mcp-shodan** is an [MCP](https://modelcontextprotocol.io) server that gives AI agents access to the [Shodan API](https://developer.shodan.io/api) and [Shodan CVEDB](https://cvedb.shodan.io). Hand your agent an IP, hostname, search query, product or CVE and get back what an analyst would look at: open ports and banners, TLS certificates, DNS, and vulnerability severity with EPSS and KEV status.
 
-### Installing via Claude Code
+> [!NOTE]
+> Independent project, not affiliated with Shodan. You need your own [Shodan API key](https://account.shodan.io/).
 
-```bash
-claude mcp add --transport stdio --env SHODAN_API_KEY=your-shodan-api-key shodan -- npx -y @burtthecoder/mcp-shodan
+## Highlights
+
+- **Host reconnaissance.** Open ports, service banners, HTTP titles, TLS certificate details (fingerprint, JARM, JA3S), cloud provider and tags for any IPv4 or IPv6 address.
+- **Device search.** Shodan query syntax with a country breakdown of all matches.
+- **Vulnerability intelligence.** CVE details with CVSS, EPSS and KEV; CVEs by product or CPE, sortable by EPSS. CVEDB is free and doesn't spend query credits.
+- **Batch DNS.** Forward and reverse lookups for many names or IPs in one call.
+- **Two transports.** stdio for desktop clients, HTTP streaming for a shared service.
+- **Tested.** Unit tests with a mocked Shodan API run in CI on Node 20, 22 and 24.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["AI agent<br/>(Claude, Codex, Gemini, VS Code)"] -->|"MCP over stdio or HTTP"| S["mcp-shodan"]
+    S -->|"validate input,<br/>HTTPS + API key"| SH["Shodan REST API"]
+    S -->|"HTTPS, no key"| C["Shodan CVEDB"]
+    SH -->|"JSON"| S
+    C -->|"JSON"| S
+    S -->|"structured JSON text"| A
 ```
 
-### Installing via Codex CLI
+## Quickstart
 
-```bash
-codex mcp add shodan --env SHODAN_API_KEY=your-shodan-api-key -- npx -y @burtthecoder/mcp-shodan
+**Requirements:** Node.js 20 or newer and a Shodan API key.
+
+```sh
+# Claude Code
+claude mcp add --transport stdio --env SHODAN_API_KEY=your-key shodan -- npx -y @burtthecoder/mcp-shodan
+
+# Codex CLI
+codex mcp add shodan --env SHODAN_API_KEY=your-key -- npx -y @burtthecoder/mcp-shodan
+
+# Gemini CLI
+gemini mcp add -e SHODAN_API_KEY=your-key shodan npx -y @burtthecoder/mcp-shodan
 ```
 
-### Installing via Gemini CLI
+For Claude Desktop, VS Code, Smithery and running from source, see [Connect a client](docs/clients.md).
 
-```bash
-gemini mcp add -e SHODAN_API_KEY=your-shodan-api-key shodan npx -y @burtthecoder/mcp-shodan
-```
-
-### Installing via Smithery
-
-To install Shodan Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@burtthecoder/mcp-shodan):
-
-```bash
-npx -y @smithery/cli install @burtthecoder/mcp-shodan --client claude
-```
-
-### Installing Manually
-1. Install the server globally via npm:
-```bash
-npm install -g @burtthecoder/mcp-shodan
-```
-
-2. Add to your Claude Desktop configuration file:
-```json
-{
-  "mcpServers": {
-    "shodan": {
-      "command": "mcp-shodan",
-      "env": {
-        "SHODAN_API_KEY": "your-shodan-api-key"
-      }
-    }
-  }
-}
-```
-
-Configuration file location:
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-
-3. Restart Claude Desktop
-
-## Alternative Setup (From Source)
-
-If you prefer to run from source or need to modify the code:
-
-1. Clone and build:
-```bash
-git clone https://github.com/w0h1v/mcp-shodan.git
-cd mcp-shodan
-npm install
-npm run build
-```
-
-2. Add to your Claude Desktop configuration:
-```json
-{
-  "mcpServers": {
-    "shodan": {
-      "command": "node",
-      "args": ["/absolute/path/to/mcp-shodan/build/index.js"],
-      "env": {
-        "SHODAN_API_KEY": "your-shodan-api-key"
-      }
-    }
-  }
-}
-```
-
-## Features
-
-- **Network Reconnaissance**: Query detailed information about IP addresses, including open ports, services, and vulnerabilities
-- **DNS Operations**: Forward and reverse DNS lookups for domains and IP addresses
-- **Vulnerability Intelligence**: Access to Shodan's CVEDB for detailed vulnerability information, CPE lookups, and product-specific CVE tracking
-- **Device Discovery**: Search Shodan's database of internet-connected devices with advanced filtering
+Then ask your agent: *"What is exposed on 8.8.8.8, and is CVE-2021-44228 in the KEV catalog?"* More prompts are in [example workflows](docs/examples.md).
 
 ## Tools
 
-### 1. IP Lookup Tool
-- Name: `ip_lookup`
-- Description: Retrieve comprehensive information about an IP address, including geolocation, open ports, running services, SSL certificates, hostnames, and cloud provider details if available
-- Parameters:
-  * `ip` (required): IP address to lookup
-- Returns:
-  * IP Information (address, organization, ISP, ASN)
-  * Location (country, city, coordinates)
-  * Services (ports, protocols, banners)
-  * SSL/TLS details per service (certificate subject/issuer CN, serial, SHA-256 fingerprint, validity, TLS versions, cipher, JARM, JA3S) — certificate SAN hostnames appear in the top-level Hostnames/Domains
-  * Cloud Provider details (if available)
-  * Associated hostnames and domains
-  * Tags
+Seven read-only tools. Full parameters are in the [tool reference](docs/tools.md).
 
-### 2. Shodan Search Tool
-- Name: `shodan_search`
-- Description: Search Shodan's database of internet-connected devices
-- Parameters:
-  * `query` (required): Shodan search query
-  * `max_results` (optional, default: 10): Number of results to return
-- Returns:
-  * Search summary with total results
-  * Country-based distribution statistics
-  * Detailed device information including:
-    - Basic information (IP, organization, ISP)
-    - Location data
-    - Service details
-    - Web server information
-    - Associated hostnames and domains
+| Group | Tool | What it does |
+|---|---|---|
+| Network | `ip_lookup` | Ports, banners, TLS, location, cloud and hostnames for one IP |
+| | `shodan_search` | Search devices with Shodan query syntax (1-100 results, country breakdown) |
+| | `dns_lookup` | Resolve hostnames to IPs, in batch |
+| | `reverse_dns_lookup` | Hostnames for IPs, in batch |
+| Vulnerabilities (CVEDB) | `cve_lookup` | CVSS, EPSS, KEV, references and affected CPEs for one CVE |
+| | `cpe_lookup` | CPE 2.3 identifiers for a product name |
+| | `cves_by_product` | CVEs for a product or CPE, filterable by KEV and date, sortable by EPSS |
 
-### 3. CVE Lookup Tool
-- Name: `cve_lookup`
-- Description: Query detailed vulnerability information from Shodan's CVEDB
-- Parameters:
-  * `cve` (required): CVE identifier in format CVE-YYYY-NNNNN (e.g., CVE-2021-44228)
-- Returns:
-  * Basic Information (ID, published date, summary)
-  * Severity Scores:
-    - CVSS v2 and v3 with severity levels
-    - EPSS probability and ranking
-  * Impact Assessment:
-    - KEV status
-    - Proposed mitigations
-    - Ransomware associations
-  * Affected products (CPEs)
-  * References
+> [!TIP]
+> Filtered `shodan_search` queries need a Shodan membership and cost one query credit each. `ip_lookup`, the DNS tools and the CVEDB tools work on a free account.
 
-### 4. DNS Lookup Tool
-- Name: `dns_lookup`
-- Description: Resolve domain names to IP addresses using Shodan's DNS service
-- Parameters:
-  * `hostnames` (required): Array of hostnames to resolve
-- Returns:
-  * DNS resolutions mapping hostnames to IPs
-  * Summary of total lookups and queried hostnames
+## HTTP streaming transport
 
-### 5. Reverse DNS Lookup Tool
-- Name: `reverse_dns_lookup`
-- Description: Perform reverse DNS lookups to find hostnames associated with IP addresses
-- Parameters:
-  * `ips` (required): Array of IP addresses to lookup
-- Returns:
-  * Reverse DNS resolutions mapping IPs to hostnames
-  * Summary of total lookups and results
+stdio is the default. Set `MCP_TRANSPORT=httpStream` to run a standalone HTTP service:
 
-### 6. CPE Lookup Tool
-- Name: `cpe_lookup`
-- Description: Search for Common Platform Enumeration (CPE) entries by product name
-- Parameters:
-  * `product` (required): Name of the product to search for
-  * `count` (optional, default: false): If true, returns only the count of matching CPEs
-  * `skip` (optional, default: 0): Number of CPEs to skip (for pagination)
-  * `limit` (optional, default: 1000): Maximum number of CPEs to return
-- Returns:
-  * When count is true: Total number of matching CPEs
-  * When count is false: List of CPEs with pagination details
+```sh
+MCP_TRANSPORT=httpStream MCP_PORT=3000 SHODAN_API_KEY=your-key node build/index.js
+```
 
-### 7. CVEs by Product Tool
-- Name: `cves_by_product`
-- Description: Search for vulnerabilities affecting specific products or CPEs
-- Parameters:
-  * `cpe23` (optional): CPE 2.3 identifier (format: cpe:2.3:part:vendor:product:version)
-  * `product` (optional): Name of the product to search for CVEs
-  * `count` (optional, default: false): If true, returns only the count of matching CVEs
-  * `is_kev` (optional, default: false): If true, returns only CVEs with KEV flag set
-  * `sort_by_epss` (optional, default: false): If true, sorts CVEs by EPSS score
-  * `skip` (optional, default: 0): Number of CVEs to skip (for pagination)
-  * `limit` (optional, default: 1000): Maximum number of CVEs to return
-  * `start_date` (optional): Start date for filtering CVEs (format: YYYY-MM-DDTHH:MM:SS)
-  * `end_date` (optional): End date for filtering CVEs (format: YYYY-MM-DDTHH:MM:SS)
-- Notes:
-  * Must provide either cpe23 or product, but not both
-  * Date filtering uses published time of CVEs
-- Returns:
-  * Query information
-  * Results summary with pagination details
-  * Detailed vulnerability information including:
-    - Basic information
-    - Severity scores
-    - Impact assessments
-    - References
+```sh
+docker build -t mcp-shodan .
+docker run -p 127.0.0.1:3000:3000 -e SHODAN_API_KEY=your-key -e MCP_TRANSPORT=httpStream mcp-shodan
+```
 
-## Requirements
+A health check is served at `/health`.
 
-- Node.js (v20 or later)
-- A valid [Shodan API Key](https://account.shodan.io/)
+### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `SHODAN_API_KEY` | *(required)* | Your Shodan API key |
+| `MCP_TRANSPORT` | `stdio` | `stdio` or `httpStream` |
+| `MCP_HOST` | `localhost` | Bind address (`httpStream` only). The Docker image sets `0.0.0.0` |
+| `MCP_PORT` | `3000` | HTTP port (`httpStream` only) |
+| `MCP_ENDPOINT` | `/mcp` | HTTP endpoint path (`httpStream` only) |
+
+## Security
+
+> [!WARNING]
+> The HTTP transport has **no authentication**. Keep the port on localhost or behind an authenticating reverse proxy, or anyone who can reach it can spend your query credits.
+
+- Tool arguments are validated with zod schemas before any request is built. IPs must be valid IPv4 or IPv6 and CVE IDs must match `CVE-YYYY-NNNN`.
+- The API key is read from the environment and sent only to `api.shodan.io`. CVEDB calls carry no key.
+- What you look up is sent to Shodan.
+
+Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 
 ## Troubleshooting
 
-### API Key Issues
+- **401 / invalid key:** check for spaces or quotes around the key, then restart the client. `curl "https://api.shodan.io/api-info?key=$SHODAN_API_KEY"` shows your plan and credits.
+- **403 on `shodan_search`:** search filters need a membership or paid API plan.
+- **429:** Shodan allows about one request per second. Retry after a moment.
 
-If you see API key related errors (e.g., "Request failed with status code 401"):
-
-1. Verify your API key:
-   - Must be a valid Shodan API key from your [account settings](https://account.shodan.io/)
-   - Ensure the key has sufficient credits/permissions for the operation
-   - Check for extra spaces or quotes around the key in the configuration
-   - Verify the key is correctly set in the SHODAN_API_KEY environment variable
-
-2. Common Error Codes:
-   - 401 Unauthorized: Invalid API key or missing authentication
-   - 402 Payment Required: Out of query credits
-   - 429 Too Many Requests: Rate limit exceeded
-
-3. Configuration Steps:
-   a. Get your API key from [Shodan Account](https://account.shodan.io/)
-   b. Add it to your configuration file:
-      ```json
-      {
-        "mcpServers": {
-          "shodan": {
-            "command": "mcp-shodan",
-            "env": {
-              "SHODAN_API_KEY": "your-actual-api-key-here"
-            }
-          }
-        }
-      }
-      ```
-   c. Save the config file
-   d. Restart Claude Desktop
-
-4. Testing Your Key:
-   - Try a simple query first (e.g., dns_lookup for "google.com")
-   - Check your [Shodan account dashboard](https://account.shodan.io/) for credit status
-   - Verify the key works directly with curl:
-     ```bash
-     curl "https://api.shodan.io/dns/resolve?hostnames=google.com&key=your-api-key"
-     ```
-
-### Module Loading Issues
-
-If you see module loading errors:
-1. For global installation: Use the simple configuration shown in Quick Start
-2. For source installation: Ensure you're using Node.js v18 or later
+More in the [troubleshooting guide](docs/troubleshooting.md).
 
 ## Development
 
-Build the project:
-```bash
-npm install
-npm run build
+```sh
+git clone https://github.com/w0h1v/mcp-shodan && cd mcp-shodan
+npm ci
+npm test                          # build + unit tests, no key or network
+npx fastmcp dev build/index.js    # try tools interactively (needs SHODAN_API_KEY)
 ```
 
-Test interactively with FastMCP's built-in dev tool:
-```bash
-npx fastmcp dev build/index.js
-```
-
-## Error Handling
-
-The server includes comprehensive error handling for:
-- Invalid API keys
-- Rate limiting
-- Network errors
-- Invalid input parameters
-- Invalid CVE formats
-- Invalid CPE lookup parameters
-- Invalid date formats
-- Mutually exclusive parameter validation
-
-## Version History
-
-- v1.0.30: Fixed `reverse_dns_lookup` crash on IPs without PTR records, added SSL/TLS certificate details to `ip_lookup` output, pinned axios below 1.14.1 — first npm release since v1.0.22
-- v1.0.22: Published to the [official MCP Registry](https://registry.modelcontextprotocol.io) — added `server.json` manifest, CLI install support for Claude Code, Codex, and Gemini CLI
-- v1.1.0: Migrated from raw `@modelcontextprotocol/sdk` to [FastMCP](https://github.com/punkpeye/fastmcp) — modular tool files, automatic schema validation, simplified error handling
-- v1.0.12: Added reverse DNS lookup and improved output formatting
-- v1.0.7: Added CVEs by Product search functionality and renamed vulnerabilities tool to cve_lookup
-- v1.0.6: Added CVEDB integration for enhanced CVE lookups and CPE search functionality
-- v1.0.0: Initial release with core functionality
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [changelog](CHANGELOG.md).
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT. See [LICENSE](LICENSE).

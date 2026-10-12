@@ -7,3 +7,6 @@ build/
 logs/
 projectradar.yaml
 .mcpregistry_*
+.DS_Store
+__pycache__/
+site/

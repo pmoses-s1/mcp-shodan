@@ -22,7 +22,9 @@ export async function queryShodan(endpoint: string, params: Record<string, any>)
 
 export async function queryCVEDB(cveId: string) {
   try {
-    const response = await axios.get(`${CVEDB_API_URL}/cve/${cveId}`);
+    const response = await axios.get(`${CVEDB_API_URL}/cve/${encodeURIComponent(cveId)}`, {
+      timeout: 10000,
+    });
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 422) {
@@ -42,7 +44,7 @@ export async function queryCPEDB(params: {
   limit?: number;
 }) {
   try {
-    const response = await axios.get(`${CVEDB_API_URL}/cpes`, { params });
+    const response = await axios.get(`${CVEDB_API_URL}/cpes`, { params, timeout: 10000 });
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 422) {
@@ -64,7 +66,7 @@ export async function queryCVEsByProduct(params: {
   end_date?: string;
 }) {
   try {
-    const response = await axios.get(`${CVEDB_API_URL}/cves`, { params });
+    const response = await axios.get(`${CVEDB_API_URL}/cves`, { params, timeout: 10000 });
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 422) {
