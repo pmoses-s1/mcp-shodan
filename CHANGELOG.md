@@ -7,7 +7,7 @@
 - `domain_info`: subdomains and DNS records for a domain, with `history`, `type` and `page` options. Costs 1 query credit.
 - `search_filters`: lists valid search filter and facet names. Free.
 - `api_info`: plan, query and scan credits, and usage limits. Free.
-- `ip_lookup`: OS, host CVEs, and per-service product, version, CPEs and CVEs. New `history` option adds a banner history; new `minify` option skips banners.
+- `ip_lookup`: OS, host CVEs, and per-service product, version, CPEs and CVEs. New `history` option adds a banner history (one row per port and version with first/last seen, so hundreds of scans stay compact); new `minify` option skips banners.
 - `shodan_search`: `page` and `facets` parameters; OS and CVEs per match.
 
 ### Changed

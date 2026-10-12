@@ -34,7 +34,7 @@ Returns:
 - **Location:** country, city, region, coordinates.
 - **Vulnerabilities:** CVE IDs Shodan associates with the host, with a count. Look them up with `cve_lookup`.
 - **Services:** one entry per open port (the latest banner) with transport, product, version, CPEs, banner, per-service CVEs, HTTP server and title, and a TLS summary (subject and issuer CN, serial, SHA-256 fingerprint, signature algorithm, key, validity, TLS versions, cipher, JARM, JA3S).
-- **Banner History** (with `history: true`): every recorded banner, newest first, with port, transport, timestamp, product and version.
+- **Banner History** (with `history: true`): one row per port, transport, product and version, with first seen, last seen and the number of observations. Version changes on a port show up as separate rows, newest first.
 - **Cloud Provider**, **Hostnames**, **Domains**, **Tags**. Certificate SAN names show up in Hostnames and Domains.
 
 ### `shodan_search`

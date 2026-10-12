@@ -318,9 +318,34 @@ test('ip_lookup enrichment: OS, product, CPE, vulns, latest banner, history', as
   assert.deepEqual(s80.CPE, ['cpe:2.3:a:nginx:nginx:1.2']);
   assert.deepEqual(s80.Vulnerabilities, ['CVE-9-1', 'CVE-9-2']);
   assert.ok(!('Vulnerabilities' in out.Services[1]));
-  assert.deepEqual(out['Banner History'].map((b) => b.Timestamp),
-    ['2024-06-01T00:00:00', '2024-01-01T00:00:00', '2023-01-01T00:00:00']);
-  assert.deepEqual(out['Banner History'][2], { Port: 80, Transport: 'tcp', Timestamp: '2023-01-01T00:00:00', Product: 'nginx', Version: '1.0' });
+  // One row per port/transport/product/version, ports ascending, newest version first.
+  assert.deepEqual(out['Banner History'], [
+    { Port: 22, Transport: 'tcp', Product: 'OpenSSH', Version: 'Unknown',
+      'First Seen': '2024-01-01T00:00:00', 'Last Seen': '2024-01-01T00:00:00', Observations: 1 },
+    { Port: 80, Transport: 'tcp', Product: 'nginx', Version: '1.2',
+      'First Seen': '2024-06-01T00:00:00', 'Last Seen': '2024-06-01T00:00:00', Observations: 1 },
+    { Port: 80, Transport: 'tcp', Product: 'nginx', Version: '1.0',
+      'First Seen': '2023-01-01T00:00:00', 'Last Seen': '2023-01-01T00:00:00', Observations: 1 },
+  ]);
+});
+
+test('ip_lookup history merges repeated banners into first/last seen ranges', async (t) => {
+  const banner = (ts, version) => ({ port: 22, transport: 'tcp', timestamp: ts, product: 'OpenSSH', version });
+  mockGet(t, {
+    ip_str: '1.1.1.1', ports: [22],
+    data: [
+      banner('2024-03-01T00:00:00', '8.0'), banner('2024-01-01T00:00:00', '7.4'),
+      banner('2024-05-01T00:00:00', '8.0'), banner('2023-06-01T00:00:00', '7.4'),
+      banner('2024-02-01T00:00:00', '7.4'),
+    ],
+  });
+  const out = JSON.parse(await run('ip_lookup', { ip: '1.1.1.1', history: true }));
+  assert.deepEqual(out['Banner History'], [
+    { Port: 22, Transport: 'tcp', Product: 'OpenSSH', Version: '8.0',
+      'First Seen': '2024-03-01T00:00:00', 'Last Seen': '2024-05-01T00:00:00', Observations: 2 },
+    { Port: 22, Transport: 'tcp', Product: 'OpenSSH', Version: '7.4',
+      'First Seen': '2023-06-01T00:00:00', 'Last Seen': '2024-02-01T00:00:00', Observations: 3 },
+  ]);
 });
 
 test('ip_lookup defaults: no history key, OS Unknown, no vulns, minify without banners', async (t) => {

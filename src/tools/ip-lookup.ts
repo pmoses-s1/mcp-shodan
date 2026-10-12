@@ -15,7 +15,7 @@ export function registerIpLookup(server: FastMCP) {
         .optional()
         .default(false)
         .describe(
-          "Include historical banners (all banners ever seen per port). Adds a 'Banner History' list; Services still shows the latest banner per port."
+          "Include historical banners. Adds a 'Banner History' with one row per port, product and version, showing first/last seen and how many times it was observed; Services still shows the latest banner per port."
         ),
       minify: z
         .boolean()
@@ -94,13 +94,7 @@ export function registerIpLookup(server: FastMCP) {
           : "None reported",
         ...(args.history
           ? {
-              "Banner History": [...data].sort(byTimeDesc).map((b) => ({
-                Port: b.port,
-                Transport: b.transport,
-                Timestamp: b.timestamp,
-                Product: b.product || "Unknown",
-                Version: b.version || "Unknown",
-              })),
+              "Banner History": summarizeHistory(data),
             }
           : {}),
         "Cloud Provider": data[0]?.cloud
@@ -118,4 +112,47 @@ export function registerIpLookup(server: FastMCP) {
       return JSON.stringify(formattedResult, null, 2);
     },
   });
+}
+
+// Shodan returns one banner per scan, so a long-lived host can have hundreds of
+// near-identical entries. Collapse them to one row per port, transport, product
+// and version with the first and last time it was seen.
+function summarizeHistory(data: ShodanService[]) {
+  const rows = new Map<
+    string,
+    {
+      Port: number;
+      Transport: string;
+      Product: string;
+      Version: string;
+      "First Seen": string;
+      "Last Seen": string;
+      Observations: number;
+    }
+  >();
+  for (const b of data) {
+    const product = b.product || "Unknown";
+    const version = b.version || "Unknown";
+    const ts = b.timestamp || "";
+    const key = JSON.stringify([b.port, b.transport, product, version]);
+    const row = rows.get(key);
+    if (!row) {
+      rows.set(key, {
+        Port: b.port,
+        Transport: b.transport,
+        Product: product,
+        Version: version,
+        "First Seen": ts,
+        "Last Seen": ts,
+        Observations: 1,
+      });
+      continue;
+    }
+    row.Observations++;
+    if (ts && (!row["First Seen"] || ts < row["First Seen"])) row["First Seen"] = ts;
+    if (ts > row["Last Seen"]) row["Last Seen"] = ts;
+  }
+  return [...rows.values()].sort(
+    (a, b) => a.Port - b.Port || b["Last Seen"].localeCompare(a["Last Seen"])
+  );
 }
