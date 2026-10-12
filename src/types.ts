@@ -133,6 +133,7 @@ export interface CveResponse {
   cvss_version: number;
   cvss_v2: number;
   cvss_v3: number;
+  cvss_v4?: number | null;
   epss: number;
   ranking_epss: number;
   kev: boolean;

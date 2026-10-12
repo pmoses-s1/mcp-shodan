@@ -392,3 +392,23 @@ test('ip_lookup defaults: no history key, OS Unknown, no vulns, minify without b
   assert.deepEqual(out.Services.map((s) => s.Port), [80, 443]);
   assert.equal(out.Services[0].Service, 'No banner');
 });
+
+test('CVSS v4 is shown when CVEDB has it, before v3 and v2', async (t) => {
+  const cve = { cve_id: 'CVE-2026-3497', published_time: '2026-01-01', summary: 's', cpes: [], references: [],
+    cvss_v4: 6.9, cvss_v3: 7.5, cvss_v2: null };
+  mockGet(t, (url, config) => config?.params?.count ? { total: 1 } : { ...cve, cves: [cve] });
+  for (const out of [
+    JSON.parse(await run('cve_lookup', { cve: 'CVE-2026-3497' }))['Severity Scores'],
+    JSON.parse(await run('cves_by_product', { product: 'openssh', limit: 1 })).Vulnerabilities[0]['Severity Scores'],
+  ]) {
+    assert.deepEqual(Object.keys(out), ['CVSS v4', 'CVSS v3', 'CVSS v2', 'EPSS']);
+    assert.deepEqual(out['CVSS v4'], { Score: 6.9, Severity: 'Medium' });
+    assert.deepEqual(out['CVSS v3'], { Score: 7.5, Severity: 'High' });
+  }
+});
+
+test('CVSS v4 reads "Not available" when absent', async (t) => {
+  mockGet(t, { cve_id: 'CVE-2021-44228', published_time: '2021-12-10', summary: 's', cpes: [], references: [], cvss_v3: 10 });
+  const out = JSON.parse(await run('cve_lookup', { cve: 'CVE-2021-44228' }));
+  assert.equal(out['Severity Scores']['CVSS v4'], 'Not available');
+});

@@ -140,6 +140,12 @@ export function registerCvesByProduct(server: FastMCP) {
                 Summary: cve.summary,
               },
               "Severity Scores": {
+                "CVSS v4": cve.cvss_v4
+                  ? {
+                      Score: cve.cvss_v4,
+                      Severity: getCvssSeverity(cve.cvss_v4),
+                    }
+                  : "Not available",
                 "CVSS v3": cve.cvss_v3
                   ? {
                       Score: cve.cvss_v3,

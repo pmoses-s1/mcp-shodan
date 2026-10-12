@@ -9,6 +9,7 @@
 - `api_info`: plan, query and scan credits, and usage limits. Free.
 - `ip_lookup`: OS, host CVEs, and per-service product, version, CPEs and CVEs. New `history` option adds a banner history (one row per port and version with first/last seen, so hundreds of scans stay compact); new `minify` option skips banners.
 - `shodan_search`: `page` and `facets` parameters; OS and CVEs per match.
+- `cve_lookup` and `cves_by_product` show CVSS v4 scores when CVEDB has them.
 
 ### Fixed
 - `cves_by_product` never showed "Total CVEs Found": CVEDB only returns a total for `count=true`, so the tool now makes a second, free count request.

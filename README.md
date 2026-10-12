@@ -32,7 +32,7 @@
 
 - **Host reconnaissance.** Open ports, products and versions, known CVEs, TLS certificate details (fingerprint, JARM, JA3S), cloud provider and banner history for any IPv4 or IPv6 address.
 - **Device search.** Shodan query syntax with paging and facet breakdowns (country, org, port, vuln and more), plus a free count-only mode for sizing a query.
-- **Vulnerability intelligence.** CVE details with CVSS, EPSS and KEV; CVEs by product or CPE, sortable by EPSS. CVEDB is free and doesn't spend query credits.
+- **Vulnerability intelligence.** CVE details with CVSS v4/v3/v2, EPSS and KEV; CVEs by product or CPE, sortable by EPSS. CVEDB is free and doesn't spend query credits.
 - **DNS.** Subdomains and DNS records for a domain, and forward and reverse lookups for many names or IPs in one call.
 - **Credit-aware.** Free tools are marked as free, and `api_info` shows the credits left on your plan.
 - **Two transports.** stdio for desktop clients, HTTP streaming for a shared service.

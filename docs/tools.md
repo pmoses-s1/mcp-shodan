@@ -475,7 +475,7 @@ Full details for one CVE.
 |---|---|---|---|
 | `cve` | string | yes | `CVE-YYYY-NNNN…`, case-insensitive. For example `CVE-2021-44228`. |
 
-Returns the summary and publish date; CVSS v3 and v2 scores with severity; EPSS probability and its percentile among all scored CVEs; whether it is in CISA's Known Exploited Vulnerabilities (KEV) catalog, with the proposed action and ransomware use; affected CPEs (the first 50, with the total, since popular software can list over a thousand); and references.
+Returns the summary and publish date; CVSS v4, v3 and v2 scores with severity (v4 where the CVE has one); EPSS probability and its percentile among all scored CVEs; whether it is in CISA's Known Exploited Vulnerabilities (KEV) catalog, with the proposed action and ransomware use; affected CPEs (the first 50, with the total, since popular software can list over a thousand); and references.
 
 <details markdown="1">
 <summary>Sample output: <code>{"cve": "CVE-2021-44228"}</code></summary>
@@ -488,6 +488,7 @@ Returns the summary and publish date; CVSS v3 and v2 scores with severity; EPSS 
     "Summary": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in …"
   },
   "Severity Scores": {
+    "CVSS v4": "Not available",
     "CVSS v3": {
       "Score": 10,
       "Severity": "Critical"
@@ -608,6 +609,7 @@ Pass exactly one of `product` and `cpe23`. Returns the query, a results summary 
         "Summary": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in …"
       },
       "Severity Scores": {
+        "CVSS v4": "Not available",
         "CVSS v3": {
           "Score": 10,
           "Severity": "Critical"
@@ -639,6 +641,7 @@ Pass exactly one of `product` and `cpe23`. Returns the query, a results summary 
         "Summary": "Apache Log4j2 versions 2.0-alpha1 through 2.16.0 (excluding 2.12.3 and 2.3.1) did not protect from uncontrolled recur…"
       },
       "Severity Scores": {
+        "CVSS v4": "Not available",
         "CVSS v3": {
           "Score": 5.9,
           "Severity": "Medium"
