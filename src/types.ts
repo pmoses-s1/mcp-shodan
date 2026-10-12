@@ -39,16 +39,18 @@ export interface SearchMatch {
     robots?: string | null;
     sitemap?: string | null;
   };
+  os?: string | null;
+  vulns?: Record<string, unknown>;
 }
+
+export type ShodanFacets = Record<
+  string,
+  Array<{ count: number; value: string | number }>
+>;
 
 export interface SearchResponse {
   matches: SearchMatch[];
-  facets: {
-    country?: Array<{
-      count: number;
-      value: string;
-    }>;
-  };
+  facets: ShodanFacets;
   total: number;
 }
 
@@ -106,6 +108,12 @@ export interface ShodanService {
   port: number;
   transport: string;
   data?: string;
+  timestamp?: string;
+  product?: string;
+  version?: string;
+  cpe?: string[];
+  cpe23?: string[];
+  vulns?: Record<string, unknown>;
   http?: {
     server?: string;
     title?: string;
@@ -151,4 +159,6 @@ export interface ShodanHostResponse {
   hostnames: string[];
   domains: string[];
   tags: string[];
+  os?: string | null;
+  vulns?: string[];
 }

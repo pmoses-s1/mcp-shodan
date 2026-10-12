@@ -22,12 +22,28 @@ Prompts you can give an agent with mcp-shodan connected, and the tool calls they
 1. `cpe_lookup` with `{"product": "log4j", "limit": 20}` to pick the right CPE, if the version matters.
 2. `cves_by_product` with `{"product": "log4j", "sort_by_epss": true, "limit": 10}`, or with `cpe23` set to the chosen CPE.
 
+## Map a domain's footprint
+
+> *"What subdomains and mail servers does example.com have, and what's exposed on them?"*
+
+1. `domain_info` with `{"domain": "example.com"}` (1 query credit).
+2. `domain_info` with `{"domain": "example.com", "type": "MX"}` if you only need mail servers.
+3. `ip_lookup` on the A records that look interesting.
+
+## Size a query before spending credits
+
+> *"How many hosts are vulnerable to CVE-2021-44228, broken down by country and organization? Check my credits first."*
+
+1. `api_info` to see remaining query credits.
+2. `shodan_count` with `{"query": "vuln:CVE-2021-44228", "facets": "country:10,org:10"}`. Free, no results fetched.
+3. `shodan_search` only if you need the hosts themselves.
+
 ## Map exposure for a query
 
 > *"How many nginx servers in Germany expose port 443, and which countries host the most nginx overall?"*
 
 1. `shodan_search` with `{"query": "product:nginx country:DE port:443", "max_results": 5}`.
-2. `shodan_search` with `{"query": "product:nginx", "max_results": 1}`. The country breakdown covers all matches, not only the ones returned.
+2. `shodan_count` with `{"query": "product:nginx", "facets": "country:10"}`. The breakdown covers all matches and costs no credits.
 
 Filtered searches need a Shodan membership and use one query credit each.
 

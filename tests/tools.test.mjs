@@ -12,12 +12,17 @@ const { registerDnsLookup } = await import('../build/tools/dns-lookup.js');
 const { registerReverseDnsLookup } = await import('../build/tools/reverse-dns-lookup.js');
 const { registerCpeLookup } = await import('../build/tools/cpe-lookup.js');
 const { registerCvesByProduct } = await import('../build/tools/cves-by-product.js');
+const { registerShodanCount } = await import('../build/tools/shodan-count.js');
+const { registerDomainInfo } = await import('../build/tools/domain-info.js');
+const { registerApiInfo } = await import('../build/tools/api-info.js');
+const { registerSearchFilters } = await import('../build/tools/search-filters.js');
 const { queryCVEDB, queryCPEDB, queryCVEsByProduct } = await import('../build/helpers.js');
 
 const tools = {};
 const fake = { addTool(def) { tools[def.name] = def; } };
 for (const r of [registerIpLookup, registerShodanSearch, registerCveLookup, registerDnsLookup,
-  registerReverseDnsLookup, registerCpeLookup, registerCvesByProduct]) r(fake);
+  registerReverseDnsLookup, registerCpeLookup, registerCvesByProduct,
+  registerShodanCount, registerDomainInfo, registerApiInfo, registerSearchFilters]) r(fake);
 
 function mockGet(t, data) {
   const calls = [];
@@ -35,10 +40,14 @@ const match = (i) => ({
   port: 80, transport: 'tcp', hostnames: [], domains: [],
 });
 
-test('all 7 tools are registered', () => {
+test('all 11 tools are registered', () => {
   assert.deepEqual(Object.keys(tools).sort(), [
-    'cpe_lookup', 'cve_lookup', 'cves_by_product', 'dns_lookup',
-    'ip_lookup', 'reverse_dns_lookup', 'shodan_search']);
+    'api_info', 'cpe_lookup', 'cve_lookup', 'cves_by_product', 'dns_lookup', 'domain_info',
+    'ip_lookup', 'reverse_dns_lookup', 'search_filters', 'shodan_count', 'shodan_search']);
+  for (const t of Object.values(tools)) {
+    assert.equal(t.annotations.readOnlyHint, true);
+    assert.equal(t.annotations.openWorldHint, true);
+  }
 });
 
 test('shodan_search does not send limit, requests country facets, slices to max_results', async (t) => {
@@ -167,4 +176,159 @@ test('reverse_dns_lookup handles null PTR', async (t) => {
   const out = JSON.parse(await run('reverse_dns_lookup', { ips: ['1.1.1.1', '9.9.9.9'] }));
   assert.deepEqual(out['Reverse DNS Resolutions'][1].Hostnames, ['No hostnames found']);
   assert.equal(out.Summary['IPs with Results'], 1);
+});
+
+// ---- API coverage additions ----
+
+test('shodan_search sends page only when > 1, custom facets, and rejects bad input', async (t) => {
+  const calls = mockGet(t, { total: 10, matches: [], facets: {} });
+  await run('shodan_search', { query: 'x' });
+  assert.ok(!('page' in calls[0].config.params));
+  assert.equal(calls[0].config.params.facets, 'country');
+  const out = JSON.parse(await run('shodan_search', { query: 'x', page: 3, facets: 'org:5,port' }));
+  assert.equal(calls[1].config.params.page, 3);
+  assert.equal(calls[1].config.params.facets, 'org:5,port');
+  assert.equal(out['Search Summary'].Page, 3);
+  assert.ok(!('Country Distribution' in out));
+  const p = tools.shodan_search.parameters;
+  assert.throws(() => p.parse({ query: 'x', page: 0 }));
+  for (const bad of ['', 'country,', 'a b', 'country:12345', 'a;b', ',a'])
+    assert.throws(() => p.parse({ query: 'x', facets: bad }), bad);
+  assert.ok(p.parse({ query: 'x', facets: 'Country:10,org,http.title' }));
+  assert.match(tools.shodan_search.description, /when the query uses filters, plus 1 per page beyond the first/);
+});
+
+test('shodan_search Facets output, OS and vulnerabilities', async (t) => {
+  mockGet(t, {
+    total: 200,
+    matches: [{ ...match(1), os: 'Linux', vulns: { 'CVE-2020-2': {}, 'CVE-2019-1': {} } }, match(2)],
+    facets: { country: [{ value: 'US', count: 50 }], port: [{ value: 80, count: 100 }] },
+  });
+  const out = JSON.parse(await run('shodan_search', { query: 'x', facets: 'country,port' }));
+  assert.deepEqual(out.Facets.country[0], { Value: 'US', Count: 50, Percentage: '25.00%' });
+  assert.equal(out.Facets.port[0].Percentage, '50.00%');
+  assert.equal(out['Country Distribution'][0].Percentage, '25.00%');
+  assert.equal(out.Matches[0].OS, 'Linux');
+  assert.deepEqual(out.Matches[0].Vulnerabilities, ['CVE-2019-1', 'CVE-2020-2']);
+  assert.ok(!('Vulnerabilities' in out.Matches[1]));
+  assert.equal(out.Matches[1].OS, 'Unknown');
+});
+
+test('shodan_count sends query/facets, guards total 0, validates facets', async (t) => {
+  const calls = mockGet(t, { total: 0, facets: { org: [{ value: 'A', count: 0 }] } });
+  const out = JSON.parse(await run('shodan_count', { query: 'apache', facets: 'org' }));
+  assert.ok(calls[0].url.endsWith('/shodan/host/count'));
+  assert.equal(calls[0].config.params.query, 'apache');
+  assert.equal(calls[0].config.params.facets, 'org');
+  assert.deepEqual(out['Search Summary'], { Query: 'apache', 'Total Results': 0 });
+  assert.equal(out.Facets.org[0].Percentage, '0.00%');
+  await run('shodan_count', { query: 'apache' });
+  assert.ok(!('facets' in calls[1].config.params));
+  assert.throws(() => tools.shodan_count.parameters.parse({ query: 'x', facets: 'bad facet' }));
+  assert.match(tools.shodan_count.description, /does not consume query credits/);
+});
+
+test('domain_info request params, output and validation', async (t) => {
+  const calls = mockGet(t, {
+    domain: 'example.com', tags: ['cdn'], subdomains: ['www', 'mail'], more: true,
+    data: [{ subdomain: '', type: 'MX', value: 'mx.example.com', last_seen: '2024-01-01' },
+      { subdomain: 'www', type: 'A', value: '1.2.3.4', last_seen: '2024-01-02' }],
+  });
+  const out = JSON.parse(await run('domain_info', { domain: 'example.com' }));
+  assert.ok(calls[0].url.endsWith('/dns/domain/example.com'));
+  for (const k of ['history', 'type', 'page']) assert.ok(!(k in calls[0].config.params), k);
+  assert.equal(out.Domain, 'example.com');
+  assert.deepEqual(out.Subdomains, { Count: 2, Names: ['www', 'mail'] });
+  assert.equal(out['DNS Records'][0].Subdomain, '@');
+  assert.equal(out['DNS Records'][0]['Last Seen'], '2024-01-01');
+  assert.equal(out['More Results'], 'Yes — request page 2');
+  await run('domain_info', { domain: 'example.com', history: true, type: 'A', page: 2 });
+  assert.deepEqual(
+    { h: calls[1].config.params.history, t: calls[1].config.params.type, p: calls[1].config.params.page },
+    { h: true, t: 'A', p: 2 });
+  const p = tools.domain_info.parameters;
+  for (const bad of ['../x', 'example', 'a b.com', 'x.com/../y', '-a.com', 'a.com?x=1'])
+    assert.throws(() => p.parse({ domain: bad }), bad);
+  for (const good of ['example.com', 'Sub.Example.CO.uk', 'xn--e1afmkfd.xn--p1ai'])
+    assert.equal(p.parse({ domain: good }).domain, good);
+  assert.throws(() => p.parse({ domain: 'a.com', page: 0 }));
+  assert.throws(() => p.parse({ domain: 'a.com', type: 'SRV' }));
+  assert.match(tools.domain_info.description, /1 query credit/);
+});
+
+test('domain_info tolerates empty response', async (t) => {
+  mockGet(t, {});
+  const out = JSON.parse(await run('domain_info', { domain: 'a.com' }));
+  assert.equal(out.Domain, 'a.com');
+  assert.deepEqual(out['DNS Records'], []);
+  assert.equal(out['More Results'], 'No');
+});
+
+test('api_info output', async (t) => {
+  const calls = mockGet(t, {
+    plan: 'dev', query_credits: 100, scan_credits: 5, monitored_ips: 2,
+    usage_limits: { query_credits: 100, scan_credits: 5, monitored_ips: 16 },
+    unlocked: true, unlocked_left: 99, https: false, telnet: false,
+  });
+  const out = JSON.parse(await run('api_info', {}));
+  assert.ok(calls[0].url.endsWith('/api-info'));
+  assert.equal(out.Plan, 'dev');
+  assert.equal(out['Query Credits'], 100);
+  assert.equal(out['Usage Limits'].monitored_ips, 16);
+  assert.equal(out['Unlocked Left'], 99);
+  assert.equal(out.HTTPS, false);
+});
+
+test('search_filters calls both endpoints and sorts', async (t) => {
+  const calls = mockGet(t, (url) =>
+    url.endsWith('/filters') ? ['port', 'country', 'asn'] : ['org', 'country']);
+  const out = JSON.parse(await run('search_filters', {}));
+  assert.deepEqual(calls.map((c) => c.url.split('.io')[1]).sort(),
+    ['/shodan/host/search/facets', '/shodan/host/search/filters']);
+  assert.deepEqual(out.Filters, { Count: 3, Names: ['asn', 'country', 'port'] });
+  assert.deepEqual(out.Facets, { Count: 2, Names: ['country', 'org'] });
+});
+
+test('ip_lookup sends history/minify only when true', async (t) => {
+  const calls = mockGet(t, { ip_str: '8.8.8.8' });
+  await run('ip_lookup', { ip: '8.8.8.8' });
+  assert.deepEqual(Object.keys(calls[0].config.params), ['key']);
+  await run('ip_lookup', { ip: '8.8.8.8', history: true, minify: true });
+  assert.equal(calls[1].config.params.history, true);
+  assert.equal(calls[1].config.params.minify, true);
+});
+
+test('ip_lookup enrichment: OS, product, CPE, vulns, latest banner, history', async (t) => {
+  mockGet(t, {
+    ip_str: '1.1.1.1', os: 'Linux', ports: [80, 22], vulns: ['CVE-2021-2', 'CVE-2020-1'],
+    data: [
+      { port: 80, transport: 'tcp', timestamp: '2023-01-01T00:00:00', data: 'old', product: 'nginx', version: '1.0' },
+      { port: 80, transport: 'tcp', timestamp: '2024-06-01T00:00:00', data: 'new', product: 'nginx', version: '1.2',
+        cpe: ['cpe:/a:nginx:nginx:1.2'], cpe23: ['cpe:2.3:a:nginx:nginx:1.2'], vulns: { 'CVE-9-2': {}, 'CVE-9-1': {} } },
+      { port: 22, transport: 'tcp', timestamp: '2024-01-01T00:00:00', data: 'ssh', product: 'OpenSSH' },
+    ],
+  });
+  const out = JSON.parse(await run('ip_lookup', { ip: '1.1.1.1', history: true }));
+  assert.equal(out['IP Information'].OS, 'Linux');
+  assert.deepEqual(out.Vulnerabilities, { Count: 2, CVEs: ['CVE-2020-1', 'CVE-2021-2'] });
+  const s80 = out.Services[0];
+  assert.equal(s80.Service, 'new');
+  assert.equal(s80.Product, 'nginx');
+  assert.equal(s80.Version, '1.2');
+  assert.deepEqual(s80.CPE, ['cpe:2.3:a:nginx:nginx:1.2']);
+  assert.deepEqual(s80.Vulnerabilities, ['CVE-9-1', 'CVE-9-2']);
+  assert.ok(!('Vulnerabilities' in out.Services[1]));
+  assert.deepEqual(out['Banner History'].map((b) => b.Timestamp),
+    ['2024-06-01T00:00:00', '2024-01-01T00:00:00', '2023-01-01T00:00:00']);
+  assert.deepEqual(out['Banner History'][2], { Port: 80, Transport: 'tcp', Timestamp: '2023-01-01T00:00:00', Product: 'nginx', Version: '1.0' });
+});
+
+test('ip_lookup defaults: no history key, OS Unknown, no vulns, minify without banners', async (t) => {
+  mockGet(t, { ip_str: '1.1.1.1', ports: [80, 443] });
+  const out = JSON.parse(await run('ip_lookup', { ip: '1.1.1.1', minify: true }));
+  assert.equal(out['IP Information'].OS, 'Unknown');
+  assert.equal(out.Vulnerabilities, 'None reported');
+  assert.ok(!('Banner History' in out));
+  assert.deepEqual(out.Services.map((s) => s.Port), [80, 443]);
+  assert.equal(out.Services[0].Service, 'No banner');
 });

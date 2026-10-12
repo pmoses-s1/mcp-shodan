@@ -1,5 +1,6 @@
 import axios from "axios";
 import { UserError } from "fastmcp";
+import { z } from "zod";
 import type { ShodanSsl } from "./types.js";
 
 export const API_BASE_URL = "https://api.shodan.io";
@@ -123,4 +124,31 @@ export function formatSslSummary(ssl: ShodanSsl) {
     JARM: ssl.jarm || "Not available",
     JA3S: ssl.ja3s || "Not available",
   };
+}
+
+export const FACETS_REGEX = /^[a-z0-9_.]+(:\d{1,4})?(,[a-z0-9_.]+(:\d{1,4})?)*$/i;
+
+export const facetsSchema = z
+  .string()
+  .regex(FACETS_REGEX, "Invalid facets format. Use e.g. 'country:10,org,port'.");
+
+export function formatFacets(
+  facets: Record<string, Array<{ value?: string | number; count?: number }>> | undefined,
+  total: number | undefined
+) {
+  const out: Record<string, Array<{ Value: string | number; Count: number; Percentage: string }>> = {};
+  for (const [name, entries] of Object.entries(facets || {})) {
+    out[name] = (Array.isArray(entries) ? entries : []).map((e) => {
+      const count = e.count ?? 0;
+      const pct = total && total > 0 ? (count / total) * 100 : 0;
+      return { Value: e.value ?? "Unknown", Count: count, Percentage: `${pct.toFixed(2)}%` };
+    });
+  }
+  return out;
+}
+
+export function sortedCveIds(vulns: unknown): string[] {
+  if (Array.isArray(vulns)) return vulns.map(String).sort();
+  if (vulns && typeof vulns === "object") return Object.keys(vulns).sort();
+  return [];
 }

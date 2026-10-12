@@ -1,16 +1,20 @@
 # Tool reference
 
-Seven tools in two groups. Every tool is read-only and returns pretty-printed JSON text.
+Eleven tools in three groups. Every tool is read-only and returns pretty-printed JSON text.
 
 | Tool | Backend | Spends Shodan query credits? |
 |---|---|---|
 | `ip_lookup` | Shodan REST API | No |
-| `shodan_search` | Shodan REST API | Yes, when the query uses filters |
+| `shodan_search` | Shodan REST API | Yes: 1 if the query uses filters, plus 1 per page after the first |
+| `shodan_count` | Shodan REST API | No |
+| `domain_info` | Shodan REST API | Yes: 1 per call |
 | `dns_lookup` | Shodan REST API | No |
 | `reverse_dns_lookup` | Shodan REST API | No |
 | `cve_lookup` | Shodan CVEDB | No (CVEDB is free and keyless) |
 | `cpe_lookup` | Shodan CVEDB | No |
 | `cves_by_product` | Shodan CVEDB | No |
+| `search_filters` | Shodan REST API | No |
+| `api_info` | Shodan REST API | No |
 
 ## Network reconnaissance
 
@@ -18,15 +22,19 @@ Seven tools in two groups. Every tool is read-only and returns pretty-printed JS
 
 Everything Shodan has seen on one host: owner, location, open ports with banners, HTTP and TLS details, cloud provider, hostnames and tags.
 
-| Parameter | Type | Required | Notes |
-|---|---|---|---|
-| `ip` | string | yes | IPv4 or IPv6 address. Anything else is rejected before a request is made. |
+| Parameter | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `ip` | string | yes | | IPv4 or IPv6 address. Anything else is rejected before a request is made. |
+| `history` | boolean | no | `false` | Include every banner Shodan has recorded for the host, not only the latest. |
+| `minify` | boolean | no | `false` | Ports and host details only, no banners. Smaller and faster. |
 
 Returns:
 
-- **IP Information:** address, organization, ISP, ASN, last update.
+- **IP Information:** address, organization, ISP, ASN, OS, last update.
 - **Location:** country, city, region, coordinates.
-- **Services:** one entry per open port with transport, banner, HTTP server and title, and a TLS summary (subject and issuer CN, serial, SHA-256 fingerprint, signature algorithm, key, validity, TLS versions, cipher, JARM, JA3S).
+- **Vulnerabilities:** CVE IDs Shodan associates with the host, with a count. Look them up with `cve_lookup`.
+- **Services:** one entry per open port (the latest banner) with transport, product, version, CPEs, banner, per-service CVEs, HTTP server and title, and a TLS summary (subject and issuer CN, serial, SHA-256 fingerprint, signature algorithm, key, validity, TLS versions, cipher, JARM, JA3S).
+- **Banner History** (with `history: true`): every recorded banner, newest first, with port, transport, timestamp, product and version.
 - **Cloud Provider**, **Hostnames**, **Domains**, **Tags**. Certificate SAN names show up in Hostnames and Domains.
 
 ### `shodan_search`
@@ -36,12 +44,41 @@ Search Shodan's index of internet-connected devices using [Shodan query syntax](
 | Parameter | Type | Required | Default | Notes |
 |---|---|---|---|---|
 | `query` | string | yes | | Shodan search query. |
-| `max_results` | integer | no | `10` | 1-100. Shodan returns one page of up to 100 matches; the tool trims it to this many. |
+| `max_results` | integer | no | `10` | 1-100. Shodan returns pages of up to 100 matches; the tool trims each page to this many. |
+| `page` | integer | no | `1` | Results page, 100 matches per page. |
+| `facets` | string | no | `country` | Comma-separated facets, each optionally with a count: `country:10,org,port`. `search_filters` lists valid names. |
 
-Returns a search summary (total matches, results returned), a country breakdown of all matches, and for each match: IP, organization, ISP, ASN, location, port, transport, product, version, CPEs, HTTP details, hostnames and domains.
+Returns a search summary (total matches, results returned, page), facet breakdowns across all matches, and for each match: IP, organization, ISP, ASN, OS, location, port, transport, product, version, CPEs, CVEs, HTTP details, hostnames and domains.
 
 !!! note
-    Queries with filters cost one query credit per call and need a membership or paid API plan. On a free account, use plain keywords or the other tools.
+    Queries with filters cost one query credit and need a membership or paid API plan. Each page after the first costs one more credit. On a free account, use plain keywords or the other tools. To see only totals and breakdowns, use `shodan_count`, which is free.
+
+### `shodan_count`
+
+The total number of matches and facet breakdowns for a query, without fetching results. It costs no query credits, so use it to size a query before running `shodan_search`.
+
+| Parameter | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `query` | string | yes | | Shodan search query. |
+| `facets` | string | no | | Same format as `shodan_search`, for example `country:5,port:10,vuln`. |
+
+Returns the query, total matches and the requested facet breakdowns.
+
+### `domain_info`
+
+Subdomains and DNS records Shodan has observed for a domain.
+
+| Parameter | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `domain` | string | yes | | A domain name such as `example.com`. |
+| `history` | boolean | no | `false` | Include records that are no longer live. |
+| `type` | string | no | | Only one record type: `A`, `AAAA`, `CNAME`, `NS`, `SOA`, `MX` or `TXT`. |
+| `page` | integer | no | `1` | Results page, for large domains. |
+
+Returns tags, the list of subdomains, DNS records (subdomain, type, value, last seen; `@` is the domain itself), and whether more pages exist.
+
+!!! note
+    Each call costs one query credit.
 
 ### `dns_lookup`
 
@@ -108,3 +145,13 @@ Pass exactly one of `product` and `cpe23`. Returns the query, a results summary 
 
 !!! tip
     The default `limit` of 1000 can return a very large response for popular products. Ask for `count: true` first, or set `limit` to 10-50 with `sort_by_epss: true` to get the most likely exploited issues.
+
+## Query helpers and account
+
+### `search_filters`
+
+Every search filter and facet name Shodan supports. Use it to build valid `shodan_search` and `shodan_count` queries. No parameters, no credits.
+
+### `api_info`
+
+Your Shodan plan and what's left on it: query credits, scan credits, monitored IPs and usage limits. No parameters, no credits. Ask the agent to check this before a run of credit-spending searches.

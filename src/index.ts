@@ -11,6 +11,10 @@ import { registerDnsLookup } from "./tools/dns-lookup.js";
 import { registerReverseDnsLookup } from "./tools/reverse-dns-lookup.js";
 import { registerCpeLookup } from "./tools/cpe-lookup.js";
 import { registerCvesByProduct } from "./tools/cves-by-product.js";
+import { registerShodanCount } from "./tools/shodan-count.js";
+import { registerDomainInfo } from "./tools/domain-info.js";
+import { registerApiInfo } from "./tools/api-info.js";
+import { registerSearchFilters } from "./tools/search-filters.js";
 
 dotenv.config();
 
@@ -31,7 +35,11 @@ const server = new FastMCP({
 - Network Reconnaissance: Query detailed information about IP addresses, including open ports, services, and vulnerabilities
 - DNS Operations: Forward and reverse DNS lookups for domains and IP addresses
 - Vulnerability Intelligence: Access to Shodan's CVEDB for detailed vulnerability information, CPE lookups, and product-specific CVE tracking
-- Device Discovery: Search Shodan's database of internet-connected devices with advanced filtering
+- Device Discovery: Search Shodan's database of internet-connected devices with advanced filtering and facets (shodan_search), or get result totals and facet breakdowns without using credits (shodan_count)
+- Domain Intelligence: Enumerate subdomains and DNS records for a domain (domain_info)
+- Account and Query Help: Check plan and credits (api_info) and list valid search filters and facets (search_filters)
+
+Credit usage: shodan_search costs 1 query credit (plus 1 per page beyond the first), and domain_info costs 1 query credit per lookup. shodan_count, api_info, search_filters, ip_lookup, dns_lookup, reverse_dns_lookup and the CVE/CPE tools do not consume query credits.
 
 Each tool provides structured, formatted output for easy analysis and integration.`,
 });
@@ -43,6 +51,10 @@ registerDnsLookup(server);
 registerReverseDnsLookup(server);
 registerCpeLookup(server);
 registerCvesByProduct(server);
+registerShodanCount(server);
+registerDomainInfo(server);
+registerApiInfo(server);
+registerSearchFilters(server);
 
 const transport = process.env.MCP_TRANSPORT || "stdio";
 

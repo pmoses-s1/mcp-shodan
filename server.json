@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.w0h1v/shodan",
-  "description": "MCP server for Shodan API — device search, IP lookup, DNS, and CVE/CPE queries.",
+  "description": "MCP server for Shodan API \u2014 device search, IP lookup, DNS, and CVE/CPE queries.",
   "repository": {
     "url": "https://github.com/w0h1v/mcp-shodan",
     "source": "github"
@@ -54,6 +54,22 @@
     {
       "name": "cves_by_product",
       "description": "Search for vulnerabilities affecting specific products or CPE identifiers"
+    },
+    {
+      "name": "shodan_count",
+      "description": "Get total result counts and facet breakdowns for a query without using query credits"
+    },
+    {
+      "name": "domain_info",
+      "description": "List subdomains and DNS records for a domain (costs 1 query credit)"
+    },
+    {
+      "name": "api_info",
+      "description": "Show API plan, query/scan credits, and usage limits"
+    },
+    {
+      "name": "search_filters",
+      "description": "List available Shodan search filters and facets"
     }
   ]
 }

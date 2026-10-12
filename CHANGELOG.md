@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added
+- `shodan_count`: total matches and facet breakdowns for a query without fetching results. Free.
+- `domain_info`: subdomains and DNS records for a domain, with `history`, `type` and `page` options. Costs 1 query credit.
+- `search_filters`: lists valid search filter and facet names. Free.
+- `api_info`: plan, query and scan credits, and usage limits. Free.
+- `ip_lookup`: OS, host CVEs, and per-service product, version, CPEs and CVEs. New `history` option adds a banner history; new `minify` option skips banners.
+- `shodan_search`: `page` and `facets` parameters; OS and CVEs per match.
+
+### Changed
+- `ip_lookup` shows the newest banner for each port when several exist.
+- `shodan_search` returns breakdowns for all requested facets under `Facets`. `Country Distribution` is kept when the country facet is requested, which is the default.
+
+## 1.0.33
+
 ### Fixed
 - `shodan_search`: `max_results` was ignored and a full page of up to 100 matches came back, because the server sent a `limit` parameter Shodan's search API doesn't accept. Results are now trimmed to `max_results` (1-100).
 - `shodan_search`: "Country Distribution" was always empty because facets were never requested. The server now asks for `facets=country`.
