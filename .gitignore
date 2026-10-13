@@ -1,5 +1,3 @@
-node_modules/
-build/
 *.log
 .env
 .env.local
@@ -10,3 +8,5 @@ projectradar.yaml
 .DS_Store
 __pycache__/
 site/
+
+# vendored for the no-npm Docker image: build/ and node_modules/ are committed
