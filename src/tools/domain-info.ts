@@ -1,6 +1,6 @@
 import { FastMCP } from "fastmcp";
 import { z } from "zod";
-import { queryShodan } from "../helpers.js";
+import { queryShodan, MAX_PAGE } from "../helpers.js";
 
 const HOSTNAME_REGEX =
   /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/i;
@@ -36,9 +36,10 @@ export function registerDomainInfo(server: FastMCP) {
         .number()
         .int()
         .min(1)
+        .max(MAX_PAGE)
         .optional()
         .default(1)
-        .describe("Result page number."),
+        .describe(`Result page number (max ${MAX_PAGE}).`),
     }),
     annotations: {
       readOnlyHint: true,

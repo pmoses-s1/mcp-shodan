@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { FastMCP } from "fastmcp";
-import dotenv from "dotenv";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -16,7 +15,9 @@ import { registerDomainInfo } from "./tools/domain-info.js";
 import { registerApiInfo } from "./tools/api-info.js";
 import { registerSearchFilters } from "./tools/search-filters.js";
 
-dotenv.config();
+// S1 fork: no dotenv. Credentials come from the environment only (the
+// secops-mcps image passes them over its stdin secrets channel), never from a
+// .env file in whatever directory the server happens to start in.
 
 if (!process.env.SHODAN_API_KEY) {
   throw new Error("SHODAN_API_KEY environment variable is required.");

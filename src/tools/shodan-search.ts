@@ -1,6 +1,6 @@
 import { FastMCP } from "fastmcp";
 import { z } from "zod";
-import { queryShodan, facetsSchema, formatFacets, sortedCveIds } from "../helpers.js";
+import { queryShodan, facetsSchema, formatFacets, sortedCveIds, MAX_PAGE } from "../helpers.js";
 import type { SearchResponse } from "../types.js";
 
 export function registerShodanSearch(server: FastMCP) {
@@ -22,9 +22,10 @@ export function registerShodanSearch(server: FastMCP) {
         .number()
         .int()
         .min(1)
+        .max(MAX_PAGE)
         .optional()
         .default(1)
-        .describe("Result page number (100 results per page). Pages past the first cost 1 query credit each."),
+        .describe(`Result page number (100 results per page, max ${MAX_PAGE}). Pages past the first cost 1 query credit each.`),
       facets: facetsSchema
         .optional()
         .default("country")

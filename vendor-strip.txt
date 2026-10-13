@@ -1,0 +1,27 @@
+# Paths under node_modules/ that scripts/vendor-node-fork.sh deletes after
+# `npm prune --omit=dev`. One path per line; comments and blanks ignored.
+#
+# mcp-proxy (a fastmcp dependency) ships a CLI, dist/bin/mcp-proxy.mjs, that
+# imports pipenet: "Expose your local server to the public internet". The
+# library entry point fastmcp imports (dist/index.mjs) never references it, so
+# the CLI and pipenet's whole dependency closure (a Koa web server, 26 packages,
+# pipenet itself with no declared licence) are dead code for this server.
+# Verified 2026-10-13: the server lists 11 tools and serves calls without them.
+node_modules/mcp-proxy/dist/bin
+node_modules/pipenet
+node_modules/human-readable-ids
+node_modules/knuth-shuffle
+node_modules/koa
+node_modules/koa-compose
+node_modules/koa-router
+node_modules/cookies
+node_modules/keygrip
+node_modules/tsscmp
+node_modules/deep-equal
+node_modules/delegates
+node_modules/destroy
+node_modules/end-of-stream
+node_modules/pump
+node_modules/http-assert
+node_modules/punycode
+node_modules/tldjs

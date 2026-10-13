@@ -7,15 +7,33 @@ export const API_BASE_URL = "https://api.shodan.io";
 export const CVEDB_API_URL = "https://cvedb.shodan.io";
 export const SHODAN_API_KEY = process.env.SHODAN_API_KEY!;
 
+// S1 fork: every page past the first costs a Shodan query credit, so an agent
+// loop over `page` can drain a paid plan. Cap it.
+export const MAX_PAGE = 10;
+
+// S1 fork: shared axios options. Redirects are never followed: Shodan's API
+// does not redirect, and following one would resend the key-bearing query
+// string to wherever the redirect points.
+const HTTP_OPTS = { timeout: 10000, maxRedirects: 0 } as const;
+
+// S1 fork: the API key travels as the `key=` query parameter (Shodan requires
+// it). Scrub it from any text that can reach a log line or a tool result.
+export function redact(text: unknown): string {
+  let s = String(text ?? "");
+  s = s.replace(/([?&]|\b)key=[^&\s"']+/gi, "$1key=[REDACTED]");
+  if (SHODAN_API_KEY) s = s.split(SHODAN_API_KEY).join("[REDACTED]");
+  return s;
+}
+
 export async function queryShodan(endpoint: string, params: Record<string, any>) {
   try {
     const response = await axios.get(`${API_BASE_URL}${endpoint}`, {
       params: { ...params, key: SHODAN_API_KEY },
-      timeout: 10000,
+      ...HTTP_OPTS,
     });
     return response.data;
   } catch (error: any) {
-    const errorMessage = error.response?.data?.error || error.message;
+    const errorMessage = redact(error.response?.data?.error || error.message);
     console.error(`Shodan API error: ${errorMessage}`);
     throw new UserError(`Shodan API error: ${errorMessage}`);
   }
@@ -23,9 +41,10 @@ export async function queryShodan(endpoint: string, params: Record<string, any>)
 
 export async function queryCVEDB(cveId: string) {
   try {
-    const response = await axios.get(`${CVEDB_API_URL}/cve/${encodeURIComponent(cveId)}`, {
-      timeout: 10000,
-    });
+    const response = await axios.get(
+      `${CVEDB_API_URL}/cve/${encodeURIComponent(cveId)}`,
+      HTTP_OPTS
+    );
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 422) {
@@ -45,7 +64,7 @@ export async function queryCPEDB(params: {
   limit?: number;
 }) {
   try {
-    const response = await axios.get(`${CVEDB_API_URL}/cpes`, { params, timeout: 10000 });
+    const response = await axios.get(`${CVEDB_API_URL}/cpes`, { params, ...HTTP_OPTS });
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 422) {
@@ -67,7 +86,7 @@ export async function queryCVEsByProduct(params: {
   end_date?: string;
 }) {
   try {
-    const response = await axios.get(`${CVEDB_API_URL}/cves`, { params, timeout: 10000 });
+    const response = await axios.get(`${CVEDB_API_URL}/cves`, { params, ...HTTP_OPTS });
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 422) {
