@@ -4,6 +4,7 @@
 
 ### Changed
 - Each release now also publishes `server.json` to the MCP Registry, so the listing stays at the npm version.
+- The Docker image builds on `cgr.dev/chainguard/node:latest-dev` and runs on the minimal `cgr.dev/chainguard/node:latest` (no shell, no npm), both pinned by digest, as the non-root `node` user. `node:24-slim` carried 1 critical and 44 high findings; the new image has none.
 
 ## 1.0.34
 

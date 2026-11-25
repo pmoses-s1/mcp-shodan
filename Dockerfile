@@ -1,20 +1,22 @@
-# Build stage
-FROM node:24-slim AS builder
+# Build stage: Chainguard Node with npm, running as the unprivileged node user.
+FROM cgr.dev/chainguard/node:latest-dev@sha256:b9ed639e17936247866afb17a9a3ae7ae1da7d6419fd8d72266860d31a244afa AS builder
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY --chown=node:node package.json package-lock.json ./
+# --ignore-scripts: the prepare script runs tsc, and the sources are not copied yet.
+RUN npm ci --ignore-scripts
 
-COPY tsconfig.json ./
-COPY src ./src
-RUN npm run build
+COPY --chown=node:node tsconfig.json ./
+COPY --chown=node:node src ./src
+RUN npm run build && npm prune --omit=dev && npm cache clean --force
 
-# Runtime stage: production dependencies only
-FROM node:24-slim AS runner
+# Runtime stage: minimal Chainguard Node (no shell, no npm), production dependencies only.
+FROM cgr.dev/chainguard/node:latest@sha256:aaf2e52e7deb1f4e5e51461ec480516ddd9ed4559188866f131145f93dee0f44 AS runner
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+# Copied files are root-owned, so the server can read but not modify them.
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/build ./build
 
 ENV NODE_ENV=production
@@ -25,4 +27,4 @@ ENV MCP_HOST=0.0.0.0
 EXPOSE 3000
 
 USER node
-ENTRYPOINT ["node", "build/index.js"]
+ENTRYPOINT ["/usr/bin/node", "build/index.js"]
